@@ -157,14 +157,14 @@ var	ape = {
 // settings ---------------------------
 
 var	rotation = vec3.create([ .3, .4, 0 ]),
-	translation = vec3.create([0, 0, -10]),
+	translation = vec3.create([0, 0, -9]),
 	defaultColor = vec3.create([ 200, 224, 255 ]);
 	light = vec3.create([ -3, 2.5, -10 ]),
 	model = ape;
 
 // init -------------------------------
 
-var	$canvas, canvas, cw, ch, ctx;
+var	$canvas, canvas, cw, ch, ctx, touch = (typeof Touch == 'object');
 
 $(function () {
 	$canvas = $('canvas');
@@ -178,6 +178,7 @@ $(function () {
 	$(window).resize(resize);
 	$canvas.mousedown(mousedown);
 	$canvas.mousewheel(zoom);
+	$canvas.bind('touchstart', mousedown);
 });
 
 function resize () {
@@ -190,32 +191,44 @@ function resize () {
 
 // navigation -------------------------
 
-var	prevMouse;
+var	prevMouse = {}, evt;
 
-function mousedown (evt) {
-	prevMouse = evt;
+function mousedown (oevt) {
+	evt = (touch) ? oevt.originalEvent.touches[0] : oevt;
+	prevMouse.pageX = evt.pageX;
+	prevMouse.pageY = evt.pageY;
 	$canvas.bind('mousemove', (evt.which == 1) ? rotate : translate);
 	$canvas.bind('mouseup', mouseup);
 	$canvas.bind('mouseout', mouseup);
+	$canvas.bind('touchmove', (touch && oevt.originalEvent.touches.length > 1) ? translate : rotate);
+	$canvas.bind('touchend', mouseup);
+	oevt.preventDefault();
 }
 function mouseup () {
 	$canvas.unbind('mousemove', rotate);
 	$canvas.unbind('mousemove', translate);
 	$canvas.unbind('mouseup', mouseup);
 	$canvas.unbind('mouseout', mouseup);
+	$canvas.unbind('touchmove', rotate);
+	$canvas.unbind('touchmove', translate);
+	$canvas.unbind('touchend', mouseup);
 }
 
-function rotate (evt) {
+function rotate (oevt) {
+	evt = (touch) ? oevt.originalEvent.touches[0] : oevt;
 	rotation[0] += 8 * (evt.pageY - prevMouse.pageY) / canvas.height;
 	rotation[1] += 8 * (evt.pageX - prevMouse.pageX) / canvas.width;
-	prevMouse = evt;
+	prevMouse.pageX = evt.pageX;
+	prevMouse.pageY = evt.pageY;
 	updateModelView();
 	draw();	
 }
-function translate (evt) {
+function translate (oevt) {
+	evt = (touch) ? oevt.originalEvent.touches[0] : oevt;
 	translation[0] += 8 * (evt.pageX - prevMouse.pageX) / canvas.width;
 	translation[1] -= 8 * (evt.pageY - prevMouse.pageY) / canvas.height;
-	prevMouse = evt;
+	prevMouse.pageX = evt.pageX;
+	prevMouse.pageY = evt.pageY;
 	updateModelView();
 	draw();	
 }
