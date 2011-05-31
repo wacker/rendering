@@ -221,7 +221,7 @@ function rotate (oevt) {
 	prevMouse.pageX = evt.pageX;
 	prevMouse.pageY = evt.pageY;
 	updateModelView();
-	draw();	
+	draw();
 }
 function translate (oevt) {
 	evt = (touch) ? oevt.originalEvent.touches[0] : oevt;
@@ -230,7 +230,7 @@ function translate (oevt) {
 	prevMouse.pageX = evt.pageX;
 	prevMouse.pageY = evt.pageY;
 	updateModelView();
-	draw();	
+	draw();
 }
 function zoom (evt, delta) {
 	translation[2] += translation[2] / (((delta > 0) ? 1 : -1) * 20);
@@ -266,9 +266,9 @@ function loadModel (model) {
 				vec3.subtract(t.vertices[2], t.vertices[0], vec3.create())
 			)
 		);
-	
+
 		var angle = Math.acos(vec3.dot(vec3.normalize(vec3.subtract(light, t.center, vec3.create())), t.normal)) / Math.PI;
-		t.color = 'rgb(' + Math.floor(angle * c[0]) + ', ' + Math.floor(angle * c[1]) + ', ' + Math.floor(angle * c[2]) + ')';
+		t.color = 'rgb(' + Math.floor(angle * c[0]) + ',' + Math.floor(angle * c[1]) + ',' + Math.floor(angle * c[2]) + ')';
 
 		triangles.push(t);
 
@@ -313,7 +313,7 @@ function draw () {
 function zorder (t1, t2) {
 	return modelView[ 2] * (t1.center[0] - t2.center[0]) +
 	       modelView[ 6] * (t1.center[1] - t2.center[1]) +
-	       modelView[10] * (t1.center[2] - t2.center[2]);	
+	       modelView[10] * (t1.center[2] - t2.center[2]);
 }
 
 </script>
