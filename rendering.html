@@ -11,6 +11,17 @@
 <script src="glMatrix-0.9.5.min.js"></script>
 
 <script>
+var vec4 = {};
+vec4.create = function (vec) {
+	var dest = new glMatrixArrayType(4);
+	if (vec) {
+		dest[0] = vec[0];
+		dest[1] = vec[1];
+		dest[2] = vec[2];
+		dest[3] = (vec.length > 3) ? vec[3] : 1;
+	}
+	return dest;
+}
 
 // model ------------------------------
 
@@ -241,7 +252,7 @@ var	ape = {
 // settings ---------------------------
 
 var	rotation = vec3.create([ .3, .4, 0 ]),
-	translation = vec3.create([0, 0, -10]),
+	translation = vec3.create([0, 0, -5]),
 	defaultColor = vec3.create([ 200, 224, 255 ]);
 	light = vec3.create([ -3, 2.5, -10 ]),
 	model = ape;
@@ -269,7 +280,7 @@ function resize () {
 	var $doc = $(document);
 	canvas.width = cw = $doc.width();
 	canvas.height = ch = $doc.height();
-	projection = mat4.perspective(70, cw / ch, 4, 16);
+	projection = mat4.perspective(70, cw / ch, .1, 100);
 	draw();
 }
 
@@ -300,8 +311,8 @@ function mouseup () {
 
 function rotate (oevt) {
 	evt = (touch) ? oevt.originalEvent.touches[0] : oevt;
-	rotation[0] += 8 * (evt.pageY - prevMouse.pageY) / canvas.height;
-	rotation[1] += 8 * (evt.pageX - prevMouse.pageX) / canvas.width;
+	rotation[0] += 8 * (evt.pageY - prevMouse.pageY) / ch;
+	rotation[1] += 8 * (evt.pageX - prevMouse.pageX) / cw;
 	prevMouse.pageX = evt.pageX;
 	prevMouse.pageY = evt.pageY;
 	updateModelView();
@@ -309,8 +320,8 @@ function rotate (oevt) {
 }
 function translate (oevt) {
 	evt = (touch) ? oevt.originalEvent.touches[0] : oevt;
-	translation[0] += 8 * (evt.pageX - prevMouse.pageX) / canvas.width;
-	translation[1] -= 8 * (evt.pageY - prevMouse.pageY) / canvas.height;
+	translation[0] += 8 * (evt.pageX - prevMouse.pageX) / cw;
+	translation[1] -= 8 * (evt.pageY - prevMouse.pageY) / ch;
 	prevMouse.pageX = evt.pageX;
 	prevMouse.pageY = evt.pageY;
 	updateModelView();
@@ -339,7 +350,7 @@ function loadModel (model) {
 		var vertexNormals = [];
 		for (var p = 0; p < 3; p++) {
 			var index = model.indices[i + p] * 3;
-			t.vertices[p] = vec3.create(model.vertices.slice(index, index + 3));
+			t.vertices[p] = vec4.create(model.vertices.slice(index, index + 3));
 			vertexNormals[p] = vec3.normalize(vec3.create(model.vertexNormals.slice(index, index + 3)));
 			var angle = Math.acos(vec3.dot(vec3.normalize(vec3.subtract(light, t.vertices[p], vec3.create())), vertexNormals[p])) / Math.PI;
 			var prefix = 'rgba(' + Math.floor(angle * c[0]) + ',' + Math.floor(angle * c[1]) + ',' + Math.floor(angle * c[2]);
@@ -391,66 +402,64 @@ function zorder (t1, t2) {
 	       modelView[10] * (t1.center[2] - t2.center[2]);
 }
 
-var	b = [ vec3.create(), vec3.create(), vec3.create(), vec3.create(), vec3.create(), vec3.create(), vec3.create() ], i, t;//min = [], max = [];
+var	i, t,//min = [], max = [],
+	b3 = [ vec3.create(), vec3.create(), vec3.create(), vec3.create() ],
+	b4 = [ vec4.create(), vec4.create(), vec4.create() ];
 
 function draw () {
 	ctx.clearRect(0, 0, cw, ch);
 	for (i = 0; i < triangles.length; i++) {
 		t = triangles[i];
-		mat4.multiplyVec3(modelView, t.vertices[0], b[0]);
-		mat4.multiplyVec3(modelView, t.vertices[1], b[1]);
-		mat4.multiplyVec3(modelView, t.vertices[2], b[2]);
-		mat4.multiplyVec3(modelViewRotation, t.normal, b[6]);
-		if (vec3.dot(vec3.normalize(b[0], b[3]), b[6]) < 0
-		 || vec3.dot(vec3.normalize(b[1], b[4]), b[6]) < 0
-		 || vec3.dot(vec3.normalize(b[2], b[5]), b[6]) < 0) {
-			mat4.multiplyVec3(projection, b[0]);
-			mat4.multiplyVec3(projection, b[1]);
-			mat4.multiplyVec3(projection, b[2]);
-			b[0][0] = (b[0][0] / b[0][2] + .5) * cw; b[0][1] = (b[0][1] / b[0][2] - .5) * -ch;
-			b[1][0] = (b[1][0] / b[1][2] + .5) * cw; b[1][1] = (b[1][1] / b[1][2] - .5) * -ch;
-			b[2][0] = (b[2][0] / b[2][2] + .5) * cw; b[2][1] = (b[2][1] / b[2][2] - .5) * -ch;
-			b[3][0] = b[0][0] - b[1][0]; b[3][1] = b[0][1] - b[1][1];
-			b[4][0] = b[0][0] - b[2][0]; b[4][1] = b[0][1] - b[2][1];
-			b[5][0] = b[1][0] - b[2][0]; b[5][1] = b[1][1] - b[2][1];
-			//min[0] = Math.min(b[0][0], b[1][0], b[2][0]);
-			//min[1] = Math.min(b[0][1], b[1][1], b[2][1]);
-			//max[0] = Math.max(b[0][0], b[1][0], b[2][0]);
-			//max[1] = Math.max(b[0][1], b[1][1], b[2][1]);
-			b[6][0] = (b[3][0] * b[5][0] + b[3][1] * b[5][1]) / (b[5][0] * b[5][0] + b[5][1] * b[5][1]);
-			b[6][1] = (b[3][0] * b[4][0] + b[3][1] * b[4][1]) / (b[4][0] * b[4][0] + b[4][1] * b[4][1]);
-			b[6][2] = (b[4][0] * b[3][0] + b[4][1] * b[3][1]) / (b[3][0] * b[3][0] + b[3][1] * b[3][1]);
-			ctx.save();
-			//ctx.strokeStyle = t.color;
-			ctx.beginPath();
-			ctx.moveTo(b[0][0], b[0][1]);
-			ctx.lineTo(b[1][0], b[1][1]);
-			ctx.lineTo(b[2][0], b[2][1]);
-			ctx.lineTo(b[0][0], b[0][1]);
-			ctx.closePath();
-			//ctx.stroke();
-			ctx.clip();
-			ctx.fillStyle = 'black';
-			ctx.fillRect(0, 0, cw, ch);
-			//ctx.fillRect(min[0], min[1], max[0], max[1]);
-			ctx.globalCompositeOperation = 'lighter'
-			ctx.fillStyle = ctx.createLinearGradient(b[0][0], b[0][1], b[1][0] + b[6][0] * b[5][0], b[1][1] + b[6][0] * b[5][1]);
-			ctx.fillStyle.addColorStop(0, t.vertexColorsA[0]);
-			ctx.fillStyle.addColorStop(1, t.vertexColorsB[0]);
-			ctx.fillRect(0, 0, cw, ch);
-			//ctx.fillRect(min[0], min[1], max[0], max[1]);
-			ctx.fillStyle = ctx.createLinearGradient(b[1][0], b[1][1], b[0][0] - b[6][1] * b[4][0], b[0][1] - b[6][1] * b[4][1]);
-			ctx.fillStyle.addColorStop(0, t.vertexColorsA[1]);
-			ctx.fillStyle.addColorStop(1, t.vertexColorsB[1]);
-			ctx.fillRect(0, 0, cw, ch);
-			//ctx.fillRect(min[0], min[1], max[0], max[1]);
-			ctx.fillStyle = ctx.createLinearGradient(b[2][0], b[2][1], b[0][0] - b[6][2] * b[3][0], b[0][1] - b[6][2] * b[3][1]);
-			ctx.fillStyle.addColorStop(0, t.vertexColorsA[2]);
-			ctx.fillStyle.addColorStop(1, t.vertexColorsB[2]);
-			ctx.fillRect(0, 0, cw, ch);
-			//ctx.fillRect(min[0], min[1], max[0], max[1]);
-			ctx.restore();
- 		}
+		mat4.multiplyVec4(modelView, t.vertices[0], b4[0]);
+		mat4.multiplyVec3(modelViewRotation, t.normal, b3[3]);
+		if (vec3.dot(vec3.normalize(b4[0], b3[0]), b3[3]) > 0) continue;
+		mat4.multiplyVec4(projection, b4[0]);
+		mat4.multiplyVec4(projection, mat4.multiplyVec4(modelView, t.vertices[1], b4[1]));
+		mat4.multiplyVec4(projection, mat4.multiplyVec4(modelView, t.vertices[2], b4[2]));
+		if (b4[0][2] < -b4[0][3] || b4[1][2] < -b4[1][3] || b4[2][2] < -b4[2][3]) continue;
+		b4[0][0] = (b4[0][0] / b4[0][3] + .5) * cw; b4[0][1] = (b4[0][1] / b4[0][3] - .5) * -ch;
+		b4[1][0] = (b4[1][0] / b4[1][3] + .5) * cw; b4[1][1] = (b4[1][1] / b4[1][3] - .5) * -ch;
+		b4[2][0] = (b4[2][0] / b4[2][3] + .5) * cw; b4[2][1] = (b4[2][1] / b4[2][3] - .5) * -ch;
+		//min[0] = Math.min(b4[0][0], b4[1][0], b4[2][0]);
+		//min[1] = Math.min(b4[0][1], b4[1][1], b4[2][1]);
+		//max[0] = Math.max(b4[0][0], b4[1][0], b4[2][0]);
+		//max[1] = Math.max(b4[0][1], b4[1][1], b4[2][1]);
+		b3[0][0] = b4[0][0] - b4[1][0]; b3[0][1] = b4[0][1] - b4[1][1];
+		b3[1][0] = b4[0][0] - b4[2][0]; b3[1][1] = b4[0][1] - b4[2][1];
+		b3[2][0] = b4[1][0] - b4[2][0]; b3[2][1] = b4[1][1] - b4[2][1];
+		b3[3][0] = (b3[0][0] * b3[2][0] + b3[0][1] * b3[2][1]) / (b3[2][0] * b3[2][0] + b3[2][1] * b3[2][1]);
+		b3[3][1] = (b3[0][0] * b3[1][0] + b3[0][1] * b3[1][1]) / (b3[1][0] * b3[1][0] + b3[1][1] * b3[1][1]);
+		b3[3][2] = (b3[1][0] * b3[0][0] + b3[1][1] * b3[0][1]) / (b3[0][0] * b3[0][0] + b3[0][1] * b3[0][1]);
+		ctx.save();
+		ctx.strokeStyle = t.color;
+		ctx.beginPath();
+		ctx.moveTo(b4[0][0], b4[0][1]);
+		ctx.lineTo(b4[1][0], b4[1][1]);
+		ctx.lineTo(b4[2][0], b4[2][1]);
+		ctx.lineTo(b4[0][0], b4[0][1]);
+		ctx.closePath();
+		ctx.stroke();
+		ctx.clip();
+		ctx.fillStyle = 'black';
+		ctx.fillRect(0, 0, cw, ch);
+		//ctx.fillRect(min[0], min[1], max[0], max[1]);
+		ctx.globalCompositeOperation = 'lighter'
+		ctx.fillStyle = ctx.createLinearGradient(b4[0][0], b4[0][1], b4[1][0] + b3[3][0] * b3[2][0], b4[1][1] + b3[3][0] * b3[2][1]);
+		ctx.fillStyle.addColorStop(0, t.vertexColorsA[0]);
+		ctx.fillStyle.addColorStop(1, t.vertexColorsB[0]);
+		ctx.fillRect(0, 0, cw, ch);
+		//ctx.fillRect(min[0], min[1], max[0], max[1]);
+		ctx.fillStyle = ctx.createLinearGradient(b4[1][0], b4[1][1], b4[0][0] - b3[3][1] * b3[1][0], b4[0][1] - b3[3][1] * b3[1][1]);
+		ctx.fillStyle.addColorStop(0, t.vertexColorsA[1]);
+		ctx.fillStyle.addColorStop(1, t.vertexColorsB[1]);
+		ctx.fillRect(0, 0, cw, ch);
+		//ctx.fillRect(min[0], min[1], max[0], max[1]);
+		ctx.fillStyle = ctx.createLinearGradient(b4[2][0], b4[2][1], b4[0][0] - b3[3][2] * b3[0][0], b4[0][1] - b3[3][2] * b3[0][1]);
+		ctx.fillStyle.addColorStop(0, t.vertexColorsA[2]);
+		ctx.fillStyle.addColorStop(1, t.vertexColorsB[2]);
+		ctx.fillRect(0, 0, cw, ch);
+		//ctx.fillRect(min[0], min[1], max[0], max[1]);
+		ctx.restore();
 	}
 }
 
